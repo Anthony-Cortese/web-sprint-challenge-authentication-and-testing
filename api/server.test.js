@@ -52,3 +52,10 @@ describe("[POST] /api/auth/login", () => {
     expect(logged.body.message).toBe("welcome, Natalie");
   });
 });
+
+describe("[GET] /api/jokes", () => {
+  it("won't allow users without a token", async () => {
+    const jokeTheif = await request(server).get("/api/jokes");
+    expect(jokeTheif.status).toBe(401);
+  });
+});
