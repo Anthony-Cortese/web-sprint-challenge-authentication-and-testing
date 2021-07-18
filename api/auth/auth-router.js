@@ -1,7 +1,24 @@
-const router = require('express').Router();
+const router = require("express").Router();
+const jwt = require("jsonwebtoken");
+const jwtsecret = require("../secrets/index");
+const bcrypt = require("bcrypt");
+const Auth = require("./auth-model");
+const {
+  emptyCredentials,
+  registerUsername,
+  loginCredentials,
+} = require("../middleware/restricted");
 
-router.post('/register', (req, res) => {
-  res.end('implement register, please!');
+router.post("/register", emptyCredentials, registerUsername, (req, res) => {
+  const { username, password } = req.body;
+  const hash = bcrypt.hashSync(password, 6);
+  Auth.registering({ username, password: hash })
+    .then((registeredUser) => {
+      res.status(201).json(registeredUser);
+    })
+    .catch((err) => {
+      res.status(400).json(err, "you were unable to register");
+    });
   /*
     IMPLEMENT
     You are welcome to build additional middlewares to help with the endpoint's functionality.
@@ -29,9 +46,15 @@ router.post('/register', (req, res) => {
   */
 });
 
-router.post('/login', (req, res) => {
-  res.end('implement login, please!');
-  /*
+router.post("/login", emptyCredentials, loginCredentials, (req, res, next) => {
+  if (bcrypt.compareSync(req.body.password, req.user.password)) {
+    const token = makeToken(req.user);
+    res.json({ message: `welcome, ${req.user.username}`, token });
+  } else {
+    next({ status: 422, message: "invalid credentials" });
+  }
+});
+/*
     IMPLEMENT
     You are welcome to build additional middlewares to help with the endpoint's functionality.
 
@@ -54,6 +77,29 @@ router.post('/login', (req, res) => {
     4- On FAILED login due to `username` not existing in the db, or `password` being incorrect,
       the response body should include a string exactly as follows: "invalid credentials".
   */
-});
+// router.get("/logout", (req, res, next) => {
+//   if (req.session.user) {
+//     req.session.destroy((err) => {
+//       if (err) {
+//         res.status(400).json("Sorry cant log out" + err.message);
+//       } else {
+//         res.status(200).json("logged out");
+//       }
+//     });
+//   } else {
+//     res.status(200).json("no session");
+//   }
+// });
+
+function makeToken(user) {
+  const payload = {
+    subject: user.id,
+    username: user.username,
+  };
+  const options = {
+    expiresIn: "24h",
+  };
+  return jwt.sign(payload, jwtsecret, options);
+}
 
 module.exports = router;
