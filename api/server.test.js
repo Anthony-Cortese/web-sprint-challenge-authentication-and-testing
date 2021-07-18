@@ -58,4 +58,14 @@ describe("[GET] /api/jokes", () => {
     const jokeTheif = await request(server).get("/api/jokes");
     expect(jokeTheif.status).toBe(401);
   });
+
+  it("has jokes when acessed with token", async () => {
+    await request(server).post("/api/auth/register").send(natalie);
+    const logged = await request(server).post("/api/auth/login").send(natalie);
+    const auth = logged.body.token;
+    const joker = await request(server)
+      .get("/api/jokes")
+      .set("Authorization", auth);
+    expect(joker.body).toHaveLength(3);
+  });
 });
